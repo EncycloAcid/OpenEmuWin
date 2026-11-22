@@ -20,7 +20,11 @@ constexpr struct BatteryRegion {
 uint16_t controllerButtons()
 {
     XINPUT_STATE state{};
-    if (XInputGetState(0, &state) != ERROR_SUCCESS) {
+    DWORD index = 0;
+    while (index < XUSER_MAX_COUNT && XInputGetState(index, &state) != ERROR_SUCCESS) {
+        ++index;
+    }
+    if (index == XUSER_MAX_COUNT) {
         return 0;
     }
 
