@@ -1,0 +1,41 @@
+name: OpenEmuWin x64
+
+on:
+  pull_request:
+    paths:
+      - 'Windows/**'
+      - '.github/workflows/windows.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and stage Windows x64 executable
+        shell: pwsh
+        run: |
+          cmake -S Windows -B build -G "Visual Studio 17 2022" -A x64
+          cmake --build build --config Release
+          cmake --install build --config Release --prefix dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OpenEmuWin-x64
+          path: dist/
+          if-no-files-found: error
+
+  gambatte-smoke:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test with the packaged Gambatte core
+        run: |
+          sudo apt-get update
+          apt-get download libretro-gambatte
+          dpkg-deb -x libretro-gambatte_*.deb "$RUNNER_TEMP/gambatte"
+          cmake -S Windows -B build -DGAMBATTE_SMOKE_CORE="$RUNNER_TEMP/gambatte/usr/lib/x86_64-linux-gnu/libretro/gambatte_libretro.so"
+          cmake --build build
+          ctest --test-dir build --output-on-failure
